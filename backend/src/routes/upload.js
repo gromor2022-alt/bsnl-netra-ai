@@ -5,8 +5,12 @@ import prisma from "../utils/prisma.js";
 
 const router = express.Router();
 
+// File upload config
 const upload = multer({ dest: "uploads/" });
 
+/**
+ * 📁 Upload Customers
+ */
 router.post("/upload-customers", upload.single("file"), async (req, res) => {
   try {
     const workbook = xlsx.readFile(req.file.path);
@@ -30,25 +34,28 @@ router.post("/upload-customers", upload.single("file"), async (req, res) => {
       });
     }
 
-    res.json({ message: "Customers uploaded successfully" });
+    res.json({ message: "Customers uploaded successfully ✅" });
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Upload failed" });
+    res.status(500).json({ error: "Customer upload failed ❌" });
   }
 });
 
-router.post("/upload", upload.single("file"), async (req, res) => {
-  try {
-    const filePath = req.file.path;
 
-    const workbook = xlsx.readFile(filePath);
+/**
+ * 💰 Upload Revenue / Billing
+ */
+router.post("/upload-revenue", upload.single("file"), async (req, res) => {
+  try {
+    const workbook = xlsx.readFile(req.file.path);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = xlsx.utils.sheet_to_json(sheet);
 
     for (const row of data) {
       const phoneNo = String(row.PHONE_NO);
 
+      // Ensure customer exists
       await prisma.customer.upsert({
         where: { phoneNo },
         update: {},
@@ -59,6 +66,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
         },
       });
 
+      // Insert billing
       await prisma.billing.create({
         data: {
           phoneNo,
@@ -72,11 +80,11 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       });
     }
 
-    res.json({ message: "Upload successful 🚀" });
+    res.json({ message: "Revenue uploaded successfully 🚀" });
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Upload failed" });
+    res.status(500).json({ error: "Revenue upload failed ❌" });
   }
 });
 
