@@ -6,6 +6,8 @@ import {
 
 function App() {
 
+  const API = "https://bsnl-netra-ai.onrender.com/api";
+
   const [tab, setTab] = useState("dashboard");
 
   const [tickets, setTickets] = useState([]);
@@ -22,19 +24,18 @@ function App() {
   useEffect(() => { fetchAll(); }, []);
 
   const fetchAll = () => {
-    fetch("https://bsnl-netra-ai.onrender.com//api/tickets").then(r=>r.json()).then(setTickets);
-    fetch("https://bsnl-netra-ai.onrender.com//api/technicians").then(r=>r.json()).then(setTechnicians);
-    fetch("https://bsnl-netra-ai.onrender.com//api/defaulters").then(r=>r.json()).then(setDefaulters);
-    fetch("https://bsnl-netra-ai.onrender.com//api/customers").then(r=>r.json()).then(setCustomers);
-    fetch("https://bsnl-netra-ai.onrender.com//api/olt-performance")
+    fetch(`${API}/tickets`).then(r=>r.json()).then(setTickets);
+    fetch(`${API}/technicians`).then(r=>r.json()).then(setTechnicians);
+    fetch(`${API}/defaulters`).then(r=>r.json()).then(setDefaulters);
+    fetch(`${API}/customers`).then(r=>r.json()).then(setCustomers);
+    fetch(`${API}/olt-performance`)
       .then(r=>r.json())
       .then(d=>setOltData(d.oltData || []));
-    fetch("https://bsnl-netra-ai.onrender.com//api/dashboard").then(r=>r.json()).then(setData);
+    fetch(`${API}/dashboard`).then(r=>r.json()).then(setData);
   };
 
   const round = (val) => Number(val || 0).toFixed(2);
 
-  // ✅ FIX: REAL % CALCULATION (NUMBER, not string)
   const totalCustomers = oltData.reduce((sum, o) => sum + (o.totalCustomers || 0), 0);
 
   const processedOlt = oltData.map(o => ({
@@ -47,10 +48,11 @@ function App() {
   }));
 
   // -------- ACTIONS --------
+
   const createTicket = async () => {
     if (!phone || !issue) return alert("Fill all");
 
-    await fetch("https://bsnl-netra-ai.onrender.com//api/tickets", {
+    await fetch(`${API}/tickets`, {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ phoneNo: phone, issue })
@@ -66,7 +68,7 @@ function App() {
     const techId = assignMap[id];
     if (!techId) return alert("Select technician");
 
-    await fetch(`https://bsnl-netra-ai.onrender.com//api/tickets/${id}`, {
+    await fetch(`${API}/tickets/${id}`, {
       method: "PUT",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ assignedTo: techId, status:"IN_PROGRESS" })
@@ -76,7 +78,7 @@ function App() {
   };
 
   const updateStatus = async (id, status) => {
-    await fetch(`https://bsnl-netra-ai.onrender.com//api/tickets/${id}`, {
+    await fetch(`${API}/tickets/${id}`, {
       method: "PUT",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ status })
@@ -84,17 +86,32 @@ function App() {
     fetchAll();
   };
 
-  // ✅ FILE UPLOAD (Revenue / Customers)
+  // -------- UPLOAD --------
+
   const uploadFile = async (file, type) => {
     const formData = new FormData();
     formData.append("file", file);
 
-    await fetch(`https://bsnl-netra-ai.onrender.com//api/upload/${type}`, {
-      method: "POST",
-      body: formData
-    });
+    let url = "";
 
-    fetchAll();
+    if (type === "customers") {
+      url = `${API}/upload-customers`;
+    } else if (type === "revenue") {
+      url = `${API}/upload-revenue`;
+    }
+
+    try {
+      await fetch(url, {
+        method: "POST",
+        body: formData
+      });
+
+      alert("Upload successful ✅");
+      fetchAll();
+
+    } catch {
+      alert("Upload failed ❌");
+    }
   };
 
   const card = {
@@ -122,7 +139,6 @@ function App() {
         <button onClick={()=>setTab("technician")}>Technician Panel</button>
       </div>
 
-      {/* DASHBOARD */}
       {tab==="dashboard" && (
         <>
           <div style={{ display:"flex", gap:15 }}>
@@ -131,31 +147,27 @@ function App() {
             <div style={card}>Unpaid {round(data?.unpaidCustomers)}</div>
           </div>
 
-          {/* ✅ FILE UPLOAD */}
+          {/* UPLOAD */}
           <div style={{...card, marginTop:20}}>
             <h3>Upload Data</h3>
 
+            <h4>Upload Customers</h4>
             <input
-  type="file"
-  onChange={(e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+              type="file"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) uploadFile(file, "customers");
+              }}
+            />
 
-    const formData = new FormData();
-    formData.append("file", file);
-
-    fetch("https://bsnl-netra-ai.onrender.com/api/upload/revenue", {
-      method: "POST",
-      body: formData
-    })
-    .then(() => {
-      alert("Revenue uploaded successfully");
-    })
-    .catch(() => {
-      alert("Upload failed");
-    });
-  }}
-/>
+            <h4>Upload Revenue</h4>
+            <input
+              type="file"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) uploadFile(file, "revenue");
+              }}
+            />
           </div>
 
           {/* CREATE TICKET */}
@@ -203,14 +215,11 @@ function App() {
         </>
       )}
 
-      {/* REPORTS */}
       {tab==="reports" && (
         <>
           <h2 style={{ color:"white" }}>Reports</h2>
 
           <div style={{ display:"flex", gap:20 }}>
-
-            {/* REVENUE */}
             <div style={card}>
               <h3>Revenue</h3>
               <BarChart width={300} height={200} data={[
@@ -224,10 +233,8 @@ function App() {
               </BarChart>
             </div>
 
-            {/* ✅ FIXED OLT GRAPH */}
             <div style={card}>
               <h3>OLT Distribution (%)</h3>
-
               <PieChart width={300} height={200}>
                 <Pie
                   data={processedOlt.slice(0,5)}
@@ -240,76 +247,11 @@ function App() {
                     <Cell key={i} fill={COLORS[i%COLORS.length]}/>
                   ))}
                 </Pie>
-
                 <Tooltip formatter={(v)=>`${Number(v).toFixed(2)}%`} />
                 <Legend />
               </PieChart>
             </div>
-
           </div>
-
-          {/* OLT TABLE */}
-          <div style={{...card, marginTop:20}}>
-            <h3>OLT Details</h3>
-
-            {processedOlt.map((o,i)=>(
-              <div key={i}>
-                {o.oltIp} — {o.totalCustomers} Customers — {o.realPercent.toFixed(2)}%
-              </div>
-            ))}
-          </div>
-
-          {/* DEFAULTERS */}
-          <div style={{...card, marginTop:20}}>
-            <h3>Top Defaulters</h3>
-
-            <div style={{ display:"flex", fontWeight:"bold" }}>
-              <div style={{ width:"50%" }}>Telephone Number</div>
-              <div>Amount to Collect</div>
-            </div>
-
-            {defaulters.slice(0,10).map((d,i)=>(
-              <div key={i} style={{ display:"flex" }}>
-                <div style={{ width:"50%" }}>{d.phoneNo}</div>
-                <div>₹{round(d.totalDue)}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* RESOLVE */}
-          <div style={{...card, marginTop:20}}>
-            <h3>Ticket Report</h3>
-
-            {tickets.slice(0,10).map(t=>(
-              <div key={t.id}>
-                {t.phoneNo} - {t.status}
-
-                {t.status !== "RESOLVED" && (
-                  <button onClick={()=>updateStatus(t.id,"RESOLVED")}>
-                    Submit Resolve
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* TECH PANEL */}
-      {tab==="technician" && (
-        <>
-          <h2 style={{ color:"white" }}>Technician Panel</h2>
-
-          {tickets.filter(t=>t.status!=="RESOLVED").map(t=>(
-            <div key={t.id} style={{...card, marginBottom:10}}>
-              <p>{t.phoneNo}</p>
-              <p>{t.issue}</p>
-
-              <button onClick={()=>updateStatus(t.id,"RESOLVED")}>
-                Mark Complete
-              </button>
-            </div>
-          ))}
         </>
       )}
 
