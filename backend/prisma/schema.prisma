@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id        Int      @id @default(autoincrement())
+  phoneNo   String   @unique
+  name      String?
+  olt       String?
+  area      String?
+  createdAt DateTime @default(now())
+
+  billings  Billing[]
+  tickets   Ticket[]
+}
+
+model Billing {
+  id              Int      @id @default(autoincrement())
+  phoneNo         String
+  invoiceAmount   Float
+  taxAmount       Float
+  totalAmount     Float
+  paidAmount      Float?
+  revenueRealized Float?
+  commission      Float?
+  paymentDate     DateTime?
+  createdAt       DateTime @default(now())
+
+  customer Customer @relation(fields: [phoneNo], references: [phoneNo])
+}
+
+model Ticket {
+  id         Int      @id @default(autoincrement())
+  phoneNo    String
+  issue      String
+  status     String   @default("OPEN")
+  priority   String?
+  assignedTo Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  customer Customer @relation(fields: [phoneNo], references: [phoneNo])
+}
+
+model Technician {
+  id      Int      @id @default(autoincrement())
+  name    String
+  phone   String
+  area    String?
+}
