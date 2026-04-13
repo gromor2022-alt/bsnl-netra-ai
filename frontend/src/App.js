@@ -12,7 +12,6 @@ function App() {
 
   const [tickets, setTickets] = useState([]);
   const [technicians, setTechnicians] = useState([]);
-  const [defaulters, setDefaulters] = useState([]);
   const [oltData, setOltData] = useState([]);
   const [data, setData] = useState(null);
   const [customers, setCustomers] = useState([]);
@@ -77,14 +76,6 @@ function App() {
     fetchAll();
   };
 
-  const updateStatus = async (id, status) => {
-    await fetch(`${API}/tickets/${id}`, {
-      method: "PUT",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ status })
-    });
-    fetchAll();
-  };
 
   // -------- UPLOAD --------
 
