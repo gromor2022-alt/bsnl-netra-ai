@@ -22,14 +22,14 @@ function App() {
   useEffect(() => { fetchAll(); }, []);
 
   const fetchAll = () => {
-    fetch("http://localhost:5000/api/tickets").then(r=>r.json()).then(setTickets);
-    fetch("http://localhost:5000/api/technicians").then(r=>r.json()).then(setTechnicians);
-    fetch("http://localhost:5000/api/defaulters").then(r=>r.json()).then(setDefaulters);
-    fetch("http://localhost:5000/api/customers").then(r=>r.json()).then(setCustomers);
-    fetch("http://localhost:5000/api/olt-performance")
+    fetch("https://bsnl-netra-ai.onrender.com//api/tickets").then(r=>r.json()).then(setTickets);
+    fetch("https://bsnl-netra-ai.onrender.com//api/technicians").then(r=>r.json()).then(setTechnicians);
+    fetch("https://bsnl-netra-ai.onrender.com//api/defaulters").then(r=>r.json()).then(setDefaulters);
+    fetch("https://bsnl-netra-ai.onrender.com//api/customers").then(r=>r.json()).then(setCustomers);
+    fetch("https://bsnl-netra-ai.onrender.com//api/olt-performance")
       .then(r=>r.json())
       .then(d=>setOltData(d.oltData || []));
-    fetch("http://localhost:5000/api/dashboard").then(r=>r.json()).then(setData);
+    fetch("https://bsnl-netra-ai.onrender.com//api/dashboard").then(r=>r.json()).then(setData);
   };
 
   const round = (val) => Number(val || 0).toFixed(2);
@@ -50,7 +50,7 @@ function App() {
   const createTicket = async () => {
     if (!phone || !issue) return alert("Fill all");
 
-    await fetch("http://localhost:5000/api/tickets", {
+    await fetch("https://bsnl-netra-ai.onrender.com//api/tickets", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ phoneNo: phone, issue })
@@ -66,7 +66,7 @@ function App() {
     const techId = assignMap[id];
     if (!techId) return alert("Select technician");
 
-    await fetch(`http://localhost:5000/api/tickets/${id}`, {
+    await fetch(`https://bsnl-netra-ai.onrender.com//api/tickets/${id}`, {
       method: "PUT",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ assignedTo: techId, status:"IN_PROGRESS" })
@@ -76,7 +76,7 @@ function App() {
   };
 
   const updateStatus = async (id, status) => {
-    await fetch(`http://localhost:5000/api/tickets/${id}`, {
+    await fetch(`https://bsnl-netra-ai.onrender.com//api/tickets/${id}`, {
       method: "PUT",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ status })
@@ -89,7 +89,7 @@ function App() {
     const formData = new FormData();
     formData.append("file", file);
 
-    await fetch(`http://localhost:5000/api/upload/${type}`, {
+    await fetch(`https://bsnl-netra-ai.onrender.com//api/upload/${type}`, {
       method: "POST",
       body: formData
     });
@@ -135,11 +135,27 @@ function App() {
           <div style={{...card, marginTop:20}}>
             <h3>Upload Data</h3>
 
-            <input type="file" onChange={(e)=>uploadFile(e.target.files[0],"revenue")} />
-            <p>Upload Revenue File</p>
+            <input
+  type="file"
+  onChange={(e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-            <input type="file" onChange={(e)=>uploadFile(e.target.files[0],"customers")} />
-            <p>Upload Customers File</p>
+    const formData = new FormData();
+    formData.append("file", file);
+
+    fetch("https://bsnl-netra-ai.onrender.com/api/upload/revenue", {
+      method: "POST",
+      body: formData
+    })
+    .then(() => {
+      alert("Revenue uploaded successfully");
+    })
+    .catch(() => {
+      alert("Upload failed");
+    });
+  }}
+/>
           </div>
 
           {/* CREATE TICKET */}
