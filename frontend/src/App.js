@@ -35,7 +35,7 @@ function App() {
     fetch(`${API}/customers`).then(r=>r.json()).then(setCustomers).catch(()=>{});
     fetch(`${API}/olt-performance`)
       .then(r=>r.json())
-      .then(d=>setOltData(d.oltData || []))
+      .then(d => setOltData(Array.isArray(d) ? d : (d.oltData || [])));
       .catch(()=>{});
     fetch(`${API}/dashboard`)
       .then(r=>r.json())
