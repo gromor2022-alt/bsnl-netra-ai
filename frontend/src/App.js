@@ -13,7 +13,11 @@ function App() {
   const [tickets, setTickets] = useState([]);
   const [technicians, setTechnicians] = useState([]);
   const [oltData, setOltData] = useState([]);
-  const [data, setData] = useState(null);
+  const [data, setData] = useState({
+  totalBilled: 0,
+  totalCollected: 0,
+  unpaidCustomers: 0
+});
   const [customers, setCustomers] = useState([]);
 
   const [phone, setPhone] = useState("");
@@ -214,8 +218,8 @@ function App() {
             <div style={card}>
               <h3>Revenue</h3>
               <BarChart width={300} height={200} data={[
-                {name:"Billed", value:data?.totalBilled},
-                {name:"Collected", value:data?.totalCollected}
+                { name:"Billed", value: Number(data?.totalBilled || 0) },
+{ name:"Collected", value: Number(data?.totalCollected || 0) }
               ]}>
                 <XAxis dataKey="name"/>
                 <YAxis/>
