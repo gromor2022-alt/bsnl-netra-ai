@@ -30,31 +30,60 @@ function App() {
   useEffect(() => { fetchAll(); }, []);
 
   const fetchAll = () => {
-    fetch(`${API}/tickets`).then(r=>r.json()).then(setTickets).catch(()=>{});
-    fetch(`${API}/technicians`).then(r=>r.json()).then(setTechnicians).catch(()=>{});
-    fetch(`${API}/customers`).then(r=>r.json()).then(setCustomers).catch(()=>{});
-    fetch(`${API}/olt-performance`)
-      .then(r=>r.json())
-      .then(d => setOltData(Array.isArray(d) ? d : (d.oltData || [])));
-      .catch(()=>{});
-    fetch(`${API}/dashboard`)
-      .then(r=>r.json())
-      .then(setData)
-      .catch(()=>{});
-  };
+  fetch(`${API}/tickets`)
+    .then(r=>r.json())
+    .then(setTickets)
+    .catch(()=>setTickets([]));
+
+  fetch(`${API}/technicians`)
+    .then(r=>r.json())
+    .then(setTechnicians)
+    .catch(()=>setTechnicians([]));
+
+  fetch(`${API}/customers`)
+    .then(r=>r.json())
+    .then(setCustomers)
+    .catch(()=>setCustomers([]));
+
+  fetch(`${API}/olt-performance`)
+    .then(r=>r.json())
+    .then(d=>setOltData(d.oltData || []))
+    .catch(()=>setOltData([]));
+
+  fetch(`${API}/dashboard`)
+    .then(r=>r.json())
+    .then(setData)
+    .catch(()=>setData({
+      totalBilled:0,
+      totalCollected:0,
+      unpaidCustomers:0
+    }));
+};
 
   const round = (val) => Number(val || 0).toFixed(2);
 
-  const totalCustomers = oltData.reduce((sum, o) => sum + (o.totalCustomers || 0), 0);
+// ✅ Ensure oltData is always an array
+const safeOltData = Array.isArray(oltData) ? oltData : [];
 
-  const processedOlt = oltData.map(o => ({
+// ✅ Total customers calculation (safe)
+const totalCustomers = safeOltData.reduce(
+  (sum, o) => sum + Number(o?.totalCustomers || 0),
+  0
+);
+
+// ✅ Processed OLT data (safe mapping)
+const processedOlt = safeOltData.map((o) => {
+  const customers = Number(o?.totalCustomers || 0);
+
+  return {
     ...o,
-    oltIp: o.oltIp || o.olt || "N/A",
-    totalCustomers: o.totalCustomers || 0,
+    oltIp: o?.oltIp || o?.olt || "N/A",
+    totalCustomers: customers,
     realPercent: totalCustomers
-      ? (o.totalCustomers / totalCustomers) * 100
+      ? (customers / totalCustomers) * 100
       : 0
-  }));
+  };
+});
 
   // -------- ACTIONS --------
 
