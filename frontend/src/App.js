@@ -14,27 +14,33 @@ function App() {
   const [technicians, setTechnicians] = useState([]);
   const [oltData, setOltData] = useState([]);
   const [data, setData] = useState({
-  totalBilled: 0,
-  totalCollected: 0,
-  unpaidCustomers: 0
-});
+    totalBilled: 0,
+    totalCollected: 0,
+    unpaidCustomers: 0
+  });
   const [customers, setCustomers] = useState([]);
 
   const [phone, setPhone] = useState("");
   const [issue, setIssue] = useState("");
   const [assignMap, setAssignMap] = useState({});
 
+  const [customerFile, setCustomerFile] = useState(null);
+  const [revenueFile, setRevenueFile] = useState(null);
+
   useEffect(() => { fetchAll(); }, []);
 
   const fetchAll = () => {
-    fetch(`${API}/tickets`).then(r=>r.json()).then(setTickets);
-    fetch(`${API}/technicians`).then(r=>r.json()).then(setTechnicians);
-    fetch(`${API}/defaulters`).then(r=>r.json()).then(setDefaulters);
-    fetch(`${API}/customers`).then(r=>r.json()).then(setCustomers);
+    fetch(`${API}/tickets`).then(r=>r.json()).then(setTickets).catch(()=>{});
+    fetch(`${API}/technicians`).then(r=>r.json()).then(setTechnicians).catch(()=>{});
+    fetch(`${API}/customers`).then(r=>r.json()).then(setCustomers).catch(()=>{});
     fetch(`${API}/olt-performance`)
       .then(r=>r.json())
-      .then(d=>setOltData(d.oltData || []));
-    fetch(`${API}/dashboard`).then(r=>r.json()).then(setData);
+      .then(d=>setOltData(d.oltData || []))
+      .catch(()=>{});
+    fetch(`${API}/dashboard`)
+      .then(r=>r.json())
+      .then(setData)
+      .catch(()=>{});
   };
 
   const round = (val) => Number(val || 0).toFixed(2);
@@ -80,37 +86,48 @@ function App() {
     fetchAll();
   };
 
-
   // -------- UPLOAD --------
 
-  const uploadFile = async (file, type) => {
+  const uploadCustomers = async () => {
+    if (!customerFile) return alert("Select customer file");
+
     const formData = new FormData();
-    formData.append("file", file);
-
-    let url = "";
-
-    if (type === "customers") {
-      url = `${API}/upload-customers`;
-    } else if (type === "revenue") {
-      url = `${API}/upload-revenue`;
-    }
+    formData.append("file", customerFile);
 
     try {
-      await fetch(url, {
+      const res = await fetch(`${API}/upload-customers`, {
         method: "POST",
         body: formData
       });
-
-      alert("Upload successful ✅");
+      const data = await res.json();
+      alert(data.message || "Customers uploaded");
       fetchAll();
-
     } catch {
-      alert("Upload failed ❌");
+      alert("Upload failed");
+    }
+  };
+
+  const uploadRevenue = async () => {
+    if (!revenueFile) return alert("Select revenue file");
+
+    const formData = new FormData();
+    formData.append("file", revenueFile);
+
+    try {
+      const res = await fetch(`${API}/upload-revenue`, {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      alert(data.message || "Revenue uploaded");
+      fetchAll();
+    } catch {
+      alert("Upload failed");
     }
   };
 
   const card = {
-    background: "rgba(255,255,255,0.85)",
+    background: "rgba(255,255,255,0.9)",
     padding: 15,
     borderRadius: 14
   };
@@ -125,51 +142,40 @@ function App() {
     }}>
 
       <h1 style={{ textAlign:"center", color:"white" }}>
-        BSNL Netra AI — Smart Telecom Dashboard
+        BSNL Netra AI Dashboard
       </h1>
 
       <div style={{ display:"flex", gap:10, marginBottom:20 }}>
         <button onClick={()=>setTab("dashboard")}>Dashboard</button>
         <button onClick={()=>setTab("reports")}>Reports</button>
-        <button onClick={()=>setTab("technician")}>Technician Panel</button>
       </div>
 
       {tab==="dashboard" && (
         <>
           <div style={{ display:"flex", gap:15 }}>
-            <div style={card}>Billed ₹{round(data?.totalBilled)}</div>
-            <div style={card}>Collected ₹{round(data?.totalCollected)}</div>
-            <div style={card}>Unpaid {round(data?.unpaidCustomers)}</div>
+            <div style={card}>Billed ₹{round(data.totalBilled)}</div>
+            <div style={card}>Collected ₹{round(data.totalCollected)}</div>
+            <div style={card}>Unpaid {round(data.unpaidCustomers)}</div>
           </div>
 
           {/* UPLOAD */}
           <div style={{...card, marginTop:20}}>
             <h3>Upload Data</h3>
 
-            <h4>Upload Customers</h4>
-            <input
-              type="file"
-              onChange={(e) => {
-                const file = e.target.files[0];
-                if (file) uploadFile(file, "customers");
-              }}
-            />
+            <h4>Customers</h4>
+            <input type="file" onChange={(e)=>setCustomerFile(e.target.files[0])}/>
+            <button onClick={uploadCustomers}>Upload Customers</button>
 
-            <h4>Upload Revenue</h4>
-            <input
-              type="file"
-              onChange={(e) => {
-                const file = e.target.files[0];
-                if (file) uploadFile(file, "revenue");
-              }}
-            />
+            <h4>Revenue</h4>
+            <input type="file" onChange={(e)=>setRevenueFile(e.target.files[0])}/>
+            <button onClick={uploadRevenue}>Upload Revenue</button>
           </div>
 
-          {/* CREATE TICKET */}
+          {/* TICKETS */}
           <div style={{...card, marginTop:20}}>
             <h3>Raise Complaint</h3>
 
-            <input list="customers" placeholder="Phone Number"
+            <input list="customers" placeholder="Phone"
               value={phone}
               onChange={(e)=>setPhone(e.target.value)}
             />
@@ -183,29 +189,7 @@ function App() {
               onChange={(e)=>setIssue(e.target.value)}
             />
 
-            <button onClick={createTicket}>Submit + WhatsApp</button>
-          </div>
-
-          {/* TICKETS */}
-          <h3 style={{ marginTop:20, color:"white" }}>Tickets</h3>
-
-          <div style={{ display:"flex", flexWrap:"wrap", gap:15 }}>
-            {tickets.map(t=>(
-              <div key={t.id} style={{...card, width:260}}>
-                <b>{t.phoneNo}</b>
-                <p>{t.issue}</p>
-                <p>Status: {t.status}</p>
-
-                <select onChange={(e)=>setAssignMap({...assignMap,[t.id]:e.target.value})}>
-                  <option>Select Technician</option>
-                  {technicians.map(tech=>(
-                    <option key={tech.id} value={tech.id}>{tech.name}</option>
-                  ))}
-                </select>
-
-                <button onClick={()=>assignTech(t.id)}>Submit Assign</button>
-              </div>
-            ))}
+            <button onClick={createTicket}>Submit</button>
           </div>
         </>
       )}
@@ -214,39 +198,36 @@ function App() {
         <>
           <h2 style={{ color:"white" }}>Reports</h2>
 
-          <div style={{ display:"flex", gap:20 }}>
-            <div style={card}>
-              <h3>Revenue</h3>
-              <BarChart width={300} height={200} data={[
-                { name:"Billed", value: Number(data?.totalBilled || 0) },
-{ name:"Collected", value: Number(data?.totalCollected || 0) }
-              ]}>
-                <XAxis dataKey="name"/>
-                <YAxis/>
-                <Tooltip/>
-                <Bar dataKey="value"/>
-              </BarChart>
-            </div>
+          {/* BAR CHART */}
+          {data && (
+            <BarChart width={300} height={200} data={[
+              {name:"Billed", value:Number(data.totalBilled || 0)},
+              {name:"Collected", value:Number(data.totalCollected || 0)}
+            ]}>
+              <XAxis dataKey="name"/>
+              <YAxis/>
+              <Tooltip/>
+              <Bar dataKey="value"/>
+            </BarChart>
+          )}
 
-            <div style={card}>
-              <h3>OLT Distribution (%)</h3>
-              <PieChart width={300} height={200}>
-                <Pie
-                  data={processedOlt.slice(0,5)}
-                  dataKey="realPercent"
-                  nameKey="oltIp"
-                  outerRadius={80}
-                  label={({ name, value }) => `${name}: ${value.toFixed(2)}%`}
-                >
-                  {processedOlt.slice(0,5).map((_,i)=>(
-                    <Cell key={i} fill={COLORS[i%COLORS.length]}/>
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v)=>`${Number(v).toFixed(2)}%`} />
-                <Legend />
-              </PieChart>
-            </div>
-          </div>
+          {/* PIE */}
+          {processedOlt.length > 0 && (
+            <PieChart width={300} height={200}>
+              <Pie
+                data={processedOlt.slice(0,5)}
+                dataKey="realPercent"
+                nameKey="oltIp"
+                outerRadius={80}
+              >
+                {processedOlt.slice(0,5).map((_,i)=>(
+                  <Cell key={i} fill={COLORS[i%COLORS.length]}/>
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          )}
         </>
       )}
 
