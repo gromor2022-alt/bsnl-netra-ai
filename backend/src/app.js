@@ -1,4 +1,3 @@
-import path from "path";
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
@@ -32,27 +31,14 @@ app.use("/api", insightRoutes);
 app.use("/api", aiRoutes);
 app.use("/api", customerRoutes);
 
-// ---------------- ROOT CHECK ----------------
+// ---------------- HEALTH CHECK ----------------
 app.get("/api/health", (req, res) => {
   res.json({ message: "🚀 BSNL Netra AI Backend Running" });
 });
 
-// ---------------- FRONTEND SERVE ----------------
-
-// IMPORTANT: correct path from backend/src → frontend/build
-const frontendPath = path.join(process.cwd(), "../frontend/build");
-
-// Serve static files
-app.use(express.static(frontendPath));
-
-// Fallback for React routes
-app.use((req, res) => {
-  res.sendFile(path.join(frontendPath, "index.html"));
-});
-
 // ---------------- SERVER ----------------
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
