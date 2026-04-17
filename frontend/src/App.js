@@ -29,35 +29,34 @@ function App() {
 
   useEffect(() => { fetchAll(); }, []);
 
-  const fetchAll = () => {
-  fetch(`${API}/tickets`)
-    .then(r=>r.json())
-    .then(setTickets)
-    .catch(()=>setTickets([]));
+ const fetchAll = async () => {
+  try {
+    const t = await fetch(`${API}/tickets`).then(r=>r.json()).catch(()=>[]);
+    setTickets(Array.isArray(t) ? t : []);
 
-  fetch(`${API}/technicians`)
-    .then(r=>r.json())
-    .then(setTechnicians)
-    .catch(()=>setTechnicians([]));
+    const tech = await fetch(`${API}/technicians`).then(r=>r.json()).catch(()=>[]);
+    setTechnicians(Array.isArray(tech) ? tech : []);
 
-  fetch(`${API}/customers`)
-    .then(r=>r.json())
-    .then(setCustomers)
-    .catch(()=>setCustomers([]));
+    const cust = await fetch(`${API}/customers`).then(r=>r.json()).catch(()=>[]);
+    setCustomers(Array.isArray(cust) ? cust : []);
 
-  fetch(`${API}/olt-performance`)
-    .then(r=>r.json())
-    .then(d=>setOltData(d.oltData || []))
-    .catch(()=>setOltData([]));
+    const olt = await fetch(`${API}/olt-performance`)
+      .then(r=>r.json())
+      .catch(()=>({}));
+    setOltData(Array.isArray(olt) ? olt : (olt.oltData || []));
 
-  fetch(`${API}/dashboard`)
-    .then(r=>r.json())
-    .then(setData)
-    .catch(()=>setData({
-      totalBilled:0,
-      totalCollected:0,
-      unpaidCustomers:0
-    }));
+    const dash = await fetch(`${API}/dashboard`)
+      .then(r=>r.json())
+      .catch(()=>({
+        totalBilled:0,
+        totalCollected:0,
+        unpaidCustomers:0
+      }));
+    setData(dash);
+
+  } catch (err) {
+    console.log("Safe fallback triggered");
+  }
 };
 
   const round = (val) => Number(val || 0).toFixed(2);
